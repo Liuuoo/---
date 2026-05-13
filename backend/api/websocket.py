@@ -2,10 +2,10 @@ import asyncio
 import json
 import time
 from fastapi import WebSocket, WebSocketDisconnect
-from ..core.evaluator import route_packet, get_stats, get_event_log
-from ..core.spillover import spillover_monitor
-from ..core.ping_pong_db import ping_pong_db
-from ..core.data_generator import packet_stream
+from core.evaluator import route_packet, get_stats, get_event_log
+from core.spillover import spillover_monitor
+from core.ping_pong_db import ping_pong_db
+from core.data_generator import packet_stream
 
 
 class ConnectionManager:
