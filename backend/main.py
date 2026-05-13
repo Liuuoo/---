@@ -5,10 +5,10 @@ from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from .core.spillover import spillover_monitor
-from .core.ping_pong_db import ping_pong_db
-from .core.evaluator import _l1_process
-from .api.websocket import node_ws_handler, center_ws_handler, run_data_pipeline
+from core.spillover import spillover_monitor
+from core.ping_pong_db import ping_pong_db
+from core.evaluator import _l1_process
+from api.websocket import node_ws_handler, center_ws_handler, run_data_pipeline
 
 load_dotenv()
 
