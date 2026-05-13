@@ -29,7 +29,7 @@ export default function App() {
   const { light, toggle } = useTheme()
 
   return (
-    <div className="min-h-screen bg-ghost-bg flex flex-col">
+    <div className="h-screen bg-ghost-bg flex flex-col overflow-hidden">
       <nav className="border-b border-ghost-border bg-ghost-panel px-6 py-3 flex items-center gap-4">
         <span className="text-ghost-accent font-bold text-lg tracking-widest">
           GHOST-DEEP

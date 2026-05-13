@@ -74,7 +74,7 @@ export default function CenterView() {
     if (data.type === 'route_event') {
       const r = (data as RouteEvent).data
       setSubStates((prev) => ({ ...prev, [r.sub_id]: r.route }))
-      setRouteLog((prev) => [r, ...prev].slice(0, 80))
+      setRouteLog((prev) => [r, ...prev].slice(0, 30))
     }
   }, [data])
 
@@ -191,7 +191,7 @@ export default function CenterView() {
         <div className="text-xs text-ghost-dim tracking-widest mb-2 border-t border-ghost-border pt-2">
           实时路由流
         </div>
-        <div className="flex-1 overflow-y-auto space-y-1">
+        <div className="flex-1 overflow-hidden space-y-1">
           {routeLog.map((r, i) => (
             <div key={i} className={`border-l-2 pl-2 py-0.5 text-xs ${routeColor(r.route)}`}>
               <span className="text-ghost-dim">{r.sub_id}</span>
