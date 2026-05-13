@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 > 基于端-边-云协同与多级算力路由的潜艇集群调度系统
-> —— 大学学术答辩演示项目
+> ——  江苏海洋大学分布式与云计算课程作业
 
 ---
 
