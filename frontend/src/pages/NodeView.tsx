@@ -105,7 +105,7 @@ export default function NodeView() {
 
   if (data?.type === 'alert') {
     const a = data as AlertEvent
-    alerts.unshift(`[${new Date(a.ts * 1000).toISOString().slice(11, 19)}] ${a.data.route} ${a.data.sub_id}: ${a.data.msg}`)
+    alerts.unshift(`[${new Date(a.ts * 1000).toLocaleTimeString('zh-CN', { hour12: false })}] ${a.data.route} ${a.data.sub_id}: ${a.data.msg}`)
   }
 
   const gpus = telemetry?.gpus ?? []

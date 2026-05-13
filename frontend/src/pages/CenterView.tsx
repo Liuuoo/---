@@ -213,7 +213,7 @@ export default function CenterView() {
                     {routeLabel(e.level)}
                   </span>
                   <span className="text-ghost-dim">{e.sub_id}</span>
-                  <span className="text-ghost-dim">{new Date(e.ts * 1000).toISOString().slice(11, 19)}</span>
+                  <span className="text-ghost-dim">{new Date(e.ts * 1000).toLocaleTimeString('zh-CN', { hour12: false })}</span>
                 </div>
                 <div className="text-ghost-text leading-relaxed whitespace-pre-wrap">{e.msg}</div>
               </div>
