@@ -193,13 +193,24 @@ cd ---
 
 ### 2. 配置环境
 
-编辑 `backend/.env`：
+```bash
+cd backend
+cp .env.example .env
+```
+
+编辑 `.env`，填入你的 API Key：
 
 ```env
-API_KEY=your_api_key
-DEEPSEEK_BASE_URL=https://www.right.codes/deepseek/v1
-L1_MODEL=deepseek-v4-flash
-L2_MODEL=deepseek-v4-pro
+# 推荐：DeepSeek 官方 API（获取地址 https://platform.deepseek.com/api_keys）
+API_KEY=your_deepseek_api_key_here
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+L1_MODEL=deepseek-chat
+L2_MODEL=deepseek-chat
+
+# 也支持任意 OpenAI 兼容代理（如 right.codes 等）
+# DEEPSEEK_BASE_URL=https://your-proxy.com/v1
+# L1_MODEL=your-fast-model
+# L2_MODEL=your-powerful-model
 ```
 
 ### 3. 启动后端

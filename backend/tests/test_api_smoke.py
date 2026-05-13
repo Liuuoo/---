@@ -105,7 +105,6 @@ async def main():
     print(f"=== GHOST-DEEP API SMOKE TEST ===")
     print(f"API_KEY prefix = {API_KEY[:8]}…")
     print()
-    await list_models("GEMINI", os.getenv("GEMINI_BASE_URL", "https://www.right.codes/gemini"))
     await list_models("DEEPSEEK", os.getenv("DEEPSEEK_BASE_URL", "https://www.right.codes/deepseek/v1"))
     try:
         await smoke_l1()
