@@ -2,8 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── 深色主题（默认） ── */
+:root {
+  --ghost-bg: #080c10;
+  --ghost-panel: #0d1117;
+  --ghost-border: #1e2d3d;
+  --ghost-accent: #00d4ff;
+  --ghost-warn: #ff6b35;
+  --ghost-danger: #ff2244;
+  --ghost-ok: #00ff88;
+  --ghost-dim: #4a5568;
+  --ghost-text: #c9d1d9;
+}
+
+/* ── 浅色主题 ── */
+.light {
+  --ghost-bg: #f1f5f9;
+  --ghost-panel: #ffffff;
+  --ghost-border: #cbd5e1;
+  --ghost-accent: #0369a1;
+  --ghost-warn: #c2410c;
+  --ghost-danger: #b91c1c;
+  --ghost-ok: #047857;
+  --ghost-dim: #64748b;
+  --ghost-text: #1e293b;
+}
+
 @layer base {
   body {
     @apply bg-ghost-bg text-ghost-text font-mono;
   }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--ghost-bg); }
+  ::-webkit-scrollbar-thumb { background: var(--ghost-border); }
 }
