@@ -6,9 +6,9 @@ from typing import Optional
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 
-from .data_generator import SubmarinePacket
-from .spillover import spillover_monitor
-from .ping_pong_db import ping_pong_db, BufferedTask
+from core.data_generator import SubmarinePacket
+from core.spillover import spillover_monitor
+from core.ping_pong_db import ping_pong_db, BufferedTask
 
 load_dotenv()
 
