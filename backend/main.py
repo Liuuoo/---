@@ -21,8 +21,8 @@ logging.basicConfig(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 启动时现场训练 L1/L2 分流分类器（GPU 优先）
-    await asyncio.to_thread(classifier.train)
+    # 加载已有分类器权重，首次启动则现场训练并保存
+    await asyncio.to_thread(classifier.load_or_train)
     # 启动硬件模拟
     await spillover_monitor.start()
     # 启动双缓冲，L1 处理回调使用 Gemini

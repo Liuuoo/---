@@ -9,7 +9,9 @@
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -19,6 +21,10 @@ from torch.optim import Adam
 log = logging.getLogger("ghost.classifier")
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# 权重持久化路径（backend/data/ 目录）
+_CHECKPOINT_DIR = Path(__file__).resolve().parent.parent / "data"
+_CHECKPOINT_FILE = _CHECKPOINT_DIR / "classifier.pt"
 
 FEATURE_NAMES = (
     "depth_m",
@@ -97,6 +103,61 @@ class TacticalClassifier:
         self.mean: torch.Tensor | None = None
         self.std: torch.Tensor | None = None
         self.report: TrainReport | None = None
+
+    def save(self):
+        """将模型权重、统计量与训练报告持久化到磁盘"""
+        assert self.model is not None and self.mean is not None and self.std is not None
+        _CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
+        state = {
+            "model_state_dict": self.model.state_dict(),
+            "mean": self.mean.cpu(),
+            "std": self.std.cpu(),
+            "report": {
+                "device": self.report.device if self.report else str(DEVICE),
+                "n_samples": self.report.n_samples if self.report else 4000,
+                "epochs": self.report.epochs if self.report else 60,
+                "final_loss": self.report.final_loss if self.report else 0,
+                "accuracy": self.report.accuracy if self.report else 0,
+            },
+        }
+        torch.save(state, _CHECKPOINT_FILE)
+        log.info("Classifier checkpoint saved to %s", _CHECKPOINT_FILE)
+
+    def load(self) -> bool:
+        """从磁盘加载已训练的模型权重；返回 False 表示不存在"""
+        if not _CHECKPOINT_FILE.is_file():
+            return False
+        state = torch.load(_CHECKPOINT_FILE, map_location=DEVICE, weights_only=True)
+        model = TacticalMLP().to(DEVICE)
+        model.load_state_dict(state["model_state_dict"])
+        model.eval()
+
+        self.model = model
+        self.mean = state["mean"].to(DEVICE)
+        self.std = state["std"].to(DEVICE)
+        r = state["report"]
+        self.report = TrainReport(
+            device=r["device"],
+            n_samples=r["n_samples"],
+            epochs=r["epochs"],
+            final_loss=r["final_loss"],
+            accuracy=r["accuracy"],
+        )
+        log.info(
+            "Classifier loaded from checkpoint: acc=%.4f loss=%.4f device=%s",
+            r["accuracy"],
+            r["final_loss"],
+            r["device"],
+        )
+        return True
+
+    def load_or_train(self, n_samples: int = 4000, epochs: int = 60) -> TrainReport:
+        """优先加载已有权重，不存在则现场训练并保存"""
+        if self.load():
+            return self.report
+        self.train(n_samples, epochs)
+        self.save()
+        return self.report
 
     def train(self, n_samples: int = 4000, epochs: int = 60) -> TrainReport:
         log.info("Training tactical classifier on %s (n=%d, epochs=%d)", DEVICE, n_samples, epochs)
