@@ -24,8 +24,8 @@
   --ghost-warn: #c2410c;
   --ghost-danger: #b91c1c;
   --ghost-ok: #047857;
-  --ghost-dim: #64748b;
-  --ghost-text: #1e293b;
+  --ghost-dim: #475569;
+  --ghost-text: #0f172a;
 }
 
 @layer base {

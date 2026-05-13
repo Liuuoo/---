@@ -74,7 +74,7 @@ export default function CenterView() {
     if (data.type === 'route_event') {
       const r = (data as RouteEvent).data
       setSubStates((prev) => ({ ...prev, [r.sub_id]: r.route }))
-      setRouteLog((prev) => [r, ...prev].slice(0, 30))
+      setRouteLog((prev) => [r, ...prev].slice(0, 16))
     }
   }, [data])
 
@@ -85,11 +85,11 @@ export default function CenterView() {
   return (
     <div className="p-4 grid grid-cols-3 gap-4 h-[calc(100vh-52px)]">
       {/* ── 左：潜艇集群阵列 ── */}
-      <div className="border border-ghost-border bg-ghost-panel p-4 flex flex-col">
-        <div className="text-xs text-ghost-dim tracking-widest mb-3 border-b border-ghost-border pb-2">
+      <div className="border border-ghost-border bg-ghost-panel p-4 flex flex-col overflow-hidden">
+        <div className="text-xs text-ghost-dim tracking-widest mb-3 border-b border-ghost-border pb-2 shrink-0">
           潜艇集群阵列 // 16 单元编队
         </div>
-        <div className="grid grid-cols-4 gap-2 flex-1 content-start">
+        <div className="grid grid-cols-4 gap-2 flex-1 content-start min-h-0 overflow-hidden">
           {SUB_IDS.map((id) => {
             const route = subStates[id]
             const isL0 = route === 'L0'
@@ -115,14 +115,14 @@ export default function CenterView() {
             )
           })}
         </div>
-        <div className="mt-3 pt-2 border-t border-ghost-border text-xs text-ghost-dim">
+        <div className="mt-3 pt-2 border-t border-ghost-border text-xs text-ghost-dim shrink-0">
           连接 {statusText} // 活跃: {Object.keys(subStates).length} 单元
         </div>
       </div>
 
       {/* ── 中：三级路由大脑 ── */}
-      <div className="border border-ghost-border bg-ghost-panel p-4 flex flex-col">
-        <div className="text-xs text-ghost-dim tracking-widest mb-3 border-b border-ghost-border pb-2 flex justify-between">
+      <div className="border border-ghost-border bg-ghost-panel p-4 flex flex-col overflow-hidden">
+        <div className="text-xs text-ghost-dim tracking-widest mb-3 border-b border-ghost-border pb-2 flex justify-between shrink-0">
           <span>三级路由大脑 // 混合评估路由器</span>
           {clf?.trained && (
             <span className="text-ghost-accent">
@@ -133,29 +133,21 @@ export default function CenterView() {
           )}
         </div>
 
-        {/* 分类器训练铭牌 */}
         {clf?.trained && (
-          <div className="border border-ghost-border p-2 mb-3 text-xs bg-ghost-bg/40">
+          <div className="border border-ghost-border p-2 mb-3 text-xs bg-ghost-bg/40 shrink-0">
             <div className="flex justify-between text-ghost-dim mb-0.5">
               <span>战术 MLP // 启动时现场训练</span>
               <span>{clf.n_samples} 样本 · {clf.epochs} 轮</span>
             </div>
             <div className="flex justify-between text-ghost-text">
-              <span>
-                损失=<span className="text-ghost-ok font-bold">{clf.final_loss?.toFixed(4)}</span>
-              </span>
-              <span>
-                准确率=<span className="text-ghost-ok font-bold">{((clf.accuracy ?? 0) * 100).toFixed(2)}%</span>
-              </span>
-              <span>
-                设备=<span className="text-ghost-accent font-bold">{clf.device}</span>
-              </span>
+              <span>损失=<span className="text-ghost-ok font-bold">{clf.final_loss?.toFixed(4)}</span></span>
+              <span>准确率=<span className="text-ghost-ok font-bold">{((clf.accuracy ?? 0) * 100).toFixed(2)}%</span></span>
+              <span>设备=<span className="text-ghost-accent font-bold">{clf.device}</span></span>
             </div>
           </div>
         )}
 
-        {/* 路由统计 */}
-        <div className="space-y-3 mb-4">
+        <div className="space-y-3 mb-4 shrink-0">
           {[
             { key: 'L0', label: 'L0 本地熔断', desc: '规则引擎 — 紧急事态直接拦截' },
             { key: 'L1', label: 'L1 边缘处理', desc: models ? `${models.l1.model} // 10× H100 战术推理` : '边缘战术推理' },
@@ -187,12 +179,11 @@ export default function CenterView() {
           })}
         </div>
 
-        {/* 最新路由事件流 */}
-        <div className="text-xs text-ghost-dim tracking-widest mb-2 border-t border-ghost-border pt-2">
+        <div className="text-xs text-ghost-dim tracking-widest mb-2 border-t border-ghost-border pt-2 shrink-0">
           实时路由流
         </div>
-        <div className="flex-1 overflow-hidden space-y-1">
-          {routeLog.map((r, i) => (
+        <div className="flex-1 space-y-1 min-h-0 overflow-hidden">
+          {routeLog.slice(0, 10).map((r, i) => (
             <div key={i} className={`border-l-2 pl-2 py-0.5 text-xs ${routeColor(r.route)}`}>
               <span className="text-ghost-dim">{r.sub_id}</span>
               {' → '}
@@ -208,11 +199,11 @@ export default function CenterView() {
       </div>
 
       {/* ── 右：超算深加工日志 ── */}
-      <div className="border border-ghost-border bg-ghost-panel p-4 flex flex-col">
-        <div className="text-xs text-ghost-dim tracking-widest mb-3 border-b border-ghost-border pb-2">
+      <div className="border border-ghost-border bg-ghost-panel p-4 flex flex-col overflow-hidden">
+        <div className="text-xs text-ghost-dim tracking-widest mb-3 border-b border-ghost-border pb-2 shrink-0">
           超算深加工日志 // L2 / L0 输出
         </div>
-        <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
           {eventLog
             .filter((e) => e.level === 'L2' || e.level === 'L1-ESCALATED' || e.level === 'L0')
             .map((e, i) => (
