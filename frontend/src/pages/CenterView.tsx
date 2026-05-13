@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useWebSocket } from '../hooks/useWebSocket'
+import { useWebSocket, useApi, ModelsInfo, ClassifierReport } from '../hooks/useWebSocket'
 
 interface RouteEvent {
   type: 'route_event'
@@ -48,6 +48,8 @@ function routeBg(route: string) {
 
 export default function CenterView() {
   const { data, status } = useWebSocket<CenterMessage>('/ws/center')
+  const models = useApi<ModelsInfo>('/api/models')
+  const clf = useApi<ClassifierReport>('/api/classifier', 2000)
   const [subStates, setSubStates] = useState<Record<string, string>>({})
   const [stats, setStats] = useState({ L0: 0, L1: 0, L1_ESCALATED: 0, L2: 0 })
   const [eventLog, setEventLog] = useState<CenterTelemetry['log']>([])
@@ -110,17 +112,45 @@ export default function CenterView() {
 
       {/* ── 中：三级路由大脑 ── */}
       <div className="border border-ghost-border bg-ghost-panel p-4 flex flex-col">
-        <div className="text-xs text-ghost-dim tracking-widest mb-3 border-b border-ghost-border pb-2">
-          GLOBAL ROUTER // THREE-TIER HYBRID EVALUATOR
+        <div className="text-xs text-ghost-dim tracking-widest mb-3 border-b border-ghost-border pb-2 flex justify-between">
+          <span>GLOBAL ROUTER // THREE-TIER HYBRID EVALUATOR</span>
+          {clf?.trained && (
+            <span className="text-ghost-accent">
+              MLP: <span className="font-bold">{clf.device}</span>
+              {' · acc='}
+              <span className="font-bold">{((clf.accuracy ?? 0) * 100).toFixed(1)}%</span>
+            </span>
+          )}
         </div>
+
+        {/* 分类器训练铭牌 */}
+        {clf?.trained && (
+          <div className="border border-ghost-border p-2 mb-3 text-xs bg-ghost-bg/40">
+            <div className="flex justify-between text-ghost-dim mb-0.5">
+              <span>TACTICAL MLP // BOOT-TRAINED</span>
+              <span>{clf.n_samples} samples · {clf.epochs} epochs</span>
+            </div>
+            <div className="flex justify-between text-ghost-text">
+              <span>
+                loss=<span className="text-ghost-ok font-bold">{clf.final_loss?.toFixed(4)}</span>
+              </span>
+              <span>
+                acc=<span className="text-ghost-ok font-bold">{((clf.accuracy ?? 0) * 100).toFixed(2)}%</span>
+              </span>
+              <span>
+                device=<span className="text-ghost-accent font-bold">{clf.device}</span>
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* 路由统计 */}
         <div className="space-y-3 mb-4">
           {[
             { key: 'L0', label: 'L0 LOCAL FUSE', desc: 'Rule engine — emergency intercept' },
-            { key: 'L1', label: 'L1 EDGE NODE', desc: 'Gemini // 10× H100 tactical AI' },
+            { key: 'L1', label: 'L1 EDGE NODE', desc: models ? `${models.l1.model} // 10× H100 tactical AI` : 'Gemini // 10× H100 tactical AI' },
             { key: 'L1_ESCALATED', label: 'L1 ESCALATED', desc: 'Spillover → cloud center' },
-            { key: 'L2', label: 'L2 SUPERCOMPUTER', desc: 'DeepSeek // strategic analysis' },
+            { key: 'L2', label: 'L2 SUPERCOMPUTER', desc: models ? `${models.l2.model} // strategic analysis` : 'DeepSeek // strategic analysis' },
           ].map(({ key, label, desc }) => {
             const count = stats[key as keyof typeof stats]
             const pct = Math.round((count / total) * 100)

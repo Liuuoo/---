@@ -9,16 +9,42 @@ from dotenv import load_dotenv
 from core.data_generator import SubmarinePacket
 from core.spillover import spillover_monitor
 from core.ping_pong_db import ping_pong_db, BufferedTask
+from core.classifier import classifier
+from core.prompts import (
+    L1_SYSTEM_PROMPT,
+    L2_SYSTEM_PROMPT,
+    l1_user_prompt,
+    l2_user_prompt,
+)
 
 load_dotenv()
 
 _API_KEY = os.getenv("API_KEY")
-_L1_MODEL = os.getenv("L1_MODEL", "gemini-3-flash-preview")
+_L1_MODEL = os.getenv("L1_MODEL", "deepseek-v4-flash")
 _L2_MODEL = os.getenv("L2_MODEL", "deepseek-v4-pro")
+_DEEPSEEK_BASE = os.getenv("DEEPSEEK_BASE_URL", "https://www.right.codes/deepseek/v1")
+
+
+def get_model_info() -> dict:
+    """暴露给前端的模型铭牌信息"""
+    return {
+        "l1": {
+            "model": _L1_MODEL,
+            "vendor": "DeepSeek",
+            "endpoint": _DEEPSEEK_BASE,
+            "role": "EDGE TACTICAL AI",
+        },
+        "l2": {
+            "model": _L2_MODEL,
+            "vendor": "DeepSeek",
+            "endpoint": _DEEPSEEK_BASE,
+            "role": "CLOUD STRATEGIC AI",
+        },
+    }
 
 _l1_client = AsyncOpenAI(
     api_key=_API_KEY,
-    base_url=os.getenv("GEMINI_BASE_URL", "https://www.right.codes/gemini"),
+    base_url=_DEEPSEEK_BASE,
 )
 _l2_client = AsyncOpenAI(
     api_key=_API_KEY,
@@ -62,43 +88,38 @@ def _l0_check(packet: SubmarinePacket) -> Optional[str]:
 # ─── L1: Gemini 边缘节点处理 ─────────────────────────────────────────────────
 
 async def _l1_process(task: BufferedTask) -> str:
-    prompt = (
-        f"You are a tactical edge-node AI aboard a naval vessel. "
-        f"Analyze this submarine telemetry and return a concise tactical assessment (2 sentences max):\n"
-        f"{task.payload}"
-    )
     try:
         resp = await _l1_client.chat.completions.create(
             model=_L1_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=120,
+            messages=[
+                {"role": "system", "content": L1_SYSTEM_PROMPT},
+                {"role": "user", "content": l1_user_prompt(task.payload)},
+            ],
+            temperature=0.3,
             timeout=15,
         )
-        return f"[L1-EDGE] {resp.choices[0].message.content.strip()}"
+        return f"[L1-EDGE/{_L1_MODEL}] {resp.choices[0].message.content.strip()}"
     except Exception as e:
-        return f"[L1-EDGE] FALLBACK: tactical hold — API error: {type(e).__name__}"
+        return f"[L1-EDGE/{_L1_MODEL}] FALLBACK: tactical hold — API error: {type(e).__name__}"
 
 
 # ─── L2: DeepSeek 超算中心处理 ───────────────────────────────────────────────
 
 async def _l2_process(packet: SubmarinePacket, escalated: bool = False) -> str:
     tag = "L1-ESCALATED" if escalated else "L2-STRATEGIC"
-    prompt = (
-        f"You are a strategic supercomputer at a naval command center. "
-        f"Provide a deep strategic analysis (3 sentences) for this submarine data:\n"
-        f"{packet.raw_payload}\n"
-        f"Sub ID: {packet.sub_id}, Priority: {packet.mission_priority}"
-    )
     try:
         resp = await _l2_client.chat.completions.create(
             model=_L2_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=200,
+            messages=[
+                {"role": "system", "content": L2_SYSTEM_PROMPT},
+                {"role": "user", "content": l2_user_prompt(packet.to_dict(), escalated)},
+            ],
+            temperature=0.3,
             timeout=30,
         )
-        return f"[{tag}] {resp.choices[0].message.content.strip()}"
+        return f"[{tag}/{_L2_MODEL}] {resp.choices[0].message.content.strip()}"
     except Exception as e:
-        return f"[{tag}] FALLBACK: strategic hold — API error: {type(e).__name__}"
+        return f"[{tag}/{_L2_MODEL}] FALLBACK: strategic hold — API error: {type(e).__name__}"
 
 
 # ─── 主路由入口 ───────────────────────────────────────────────────────────────
@@ -126,8 +147,9 @@ async def route_packet(packet: SubmarinePacket) -> dict:
         _log("L0", packet.sub_id, l0_result)
         return result
 
-    # ── Step 2: 神经网络分流判断 (mission_priority >= 7 → L2) ──
-    is_strategic = packet.mission_priority >= 7 or packet.sonar_contacts >= 8
+    # ── Step 2: 神经网络分流判断 (启动时训练的 MLP) ──
+    is_strategic, l2_prob = classifier.predict_l2(packet.to_dict())
+    result["l2_prob"] = round(l2_prob, 3)
 
     if not is_strategic:
         # ── Step 3: 溢出检查 ──

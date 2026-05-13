@@ -1,4 +1,4 @@
-import { useWebSocket } from '../hooks/useWebSocket'
+import { useWebSocket, useApi, ModelsInfo } from '../hooks/useWebSocket'
 
 interface GpuUnit {
   gpu_id: number
@@ -98,6 +98,7 @@ function DbBlock({
 
 export default function NodeView() {
   const { data, status } = useWebSocket<NodeMessage>('/ws/node')
+  const models = useApi<ModelsInfo>('/api/models')
 
   const telemetry = data?.type === 'node_telemetry' ? (data as NodeTelemetry) : null
   const alerts: string[] = []
@@ -116,8 +117,13 @@ export default function NodeView() {
     <div className="p-4 grid grid-cols-3 gap-4 h-[calc(100vh-52px)]">
       {/* ── 左：硬件遥测 ── */}
       <div className="border border-ghost-border bg-ghost-panel p-4 flex flex-col">
-        <div className="text-xs text-ghost-dim tracking-widest mb-3 border-b border-ghost-border pb-2">
-          HARDWARE TELEMETRY // 10× H100 SXM5
+        <div className="text-xs text-ghost-dim tracking-widest mb-3 border-b border-ghost-border pb-2 flex justify-between">
+          <span>HARDWARE TELEMETRY // 10× H100 SXM5</span>
+          {models && (
+            <span className="text-ghost-ok">
+              L1: <span className="font-bold">{models.l1.model}</span>
+            </span>
+          )}
         </div>
         <div className="mb-3 flex items-center gap-3">
           <span className="text-xs text-ghost-dim">AVG LOAD</span>
