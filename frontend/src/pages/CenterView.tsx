@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useWebSocket, useApi, ModelsInfo, ClassifierReport } from '../hooks/useWebSocket'
 
 interface RouteEvent {
@@ -18,6 +18,8 @@ interface RouteEvent {
       sonar_contacts: number
       mission_priority: number
       emergency: boolean
+      hull_pressure_bar?: number
+      raw_payload?: string
     }
   }
 }
@@ -30,6 +32,24 @@ interface CenterTelemetry {
 }
 
 type CenterMessage = RouteEvent | CenterTelemetry
+
+interface SubLogEntry {
+  ts: number
+  route: string
+  l2_prob: number | null
+  packet: {
+    sub_id: string
+    depth_m: number
+    speed_kn: number
+    heading_deg: number
+    battery_pct: number
+    sonar_contacts: number
+    hull_pressure_bar: number
+    mission_priority: number
+    emergency: boolean
+  }
+  msg: string
+}
 
 const SUB_IDS = Array.from({ length: 16 }, (_, i) => `SUB-${String(i + 1).padStart(3, '0')}`)
 
@@ -55,6 +75,107 @@ function routeLabel(route: string) {
   return route
 }
 
+function gridColor(route: string | undefined) {
+  if (route === 'L0') return 'border-ghost-danger bg-ghost-danger/20 animate-pulse'
+  if (route === 'L1-ESCALATED') return 'border-ghost-warn bg-ghost-warn/10'
+  if (route === 'L2') return 'border-ghost-accent bg-ghost-accent/10'
+  if (route === 'L1') return 'border-ghost-ok bg-ghost-ok/5'
+  return 'border-ghost-border'
+}
+
+function gridTextColor(route: string | undefined) {
+  if (route === 'L0') return 'text-ghost-danger'
+  if (route === 'L1-ESCALATED') return 'text-ghost-warn'
+  if (route === 'L2') return 'text-ghost-accent'
+  if (route === 'L1') return 'text-ghost-ok'
+  return 'text-ghost-dim'
+}
+
+// ── 潜艇日志弹窗 ──
+
+function SubLogModal({
+  subId,
+  log,
+  loading,
+  onClose,
+}: {
+  subId: string
+  log: SubLogEntry[] | null
+  loading: boolean
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+      <div
+        className="bg-ghost-panel border border-ghost-border max-w-2xl w-full max-h-[80vh] flex flex-col m-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 标题栏 */}
+        <div className="border-b border-ghost-border px-4 py-3 flex justify-between items-center shrink-0">
+          <div>
+            <span className="text-ghost-accent font-bold text-sm tracking-widest">{subId}</span>
+            <span className="text-ghost-dim text-xs ml-3">独立遥测与指令日志</span>
+          </div>
+          <button onClick={onClose} className="text-ghost-dim hover:text-ghost-text text-lg leading-none cursor-pointer">
+            ✕
+          </button>
+        </div>
+
+        {/* 日志列表 */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {loading && <div className="text-ghost-dim text-xs">加载中…</div>}
+          {!loading && (!log || log.length === 0) && (
+            <div className="text-ghost-dim text-xs">暂无数据 — 等待该潜艇上报遥测…</div>
+          )}
+          {log?.map((entry, i) => (
+            <div key={i} className={`border-l-2 pl-3 py-2 text-xs ${routeBg(entry.route)}`}>
+              {/* 头部：时间 + 路由 */}
+              <div className="flex justify-between mb-2 text-xs">
+                <span className={routeColor(entry.route).split(' ')[0]}>
+                  [{routeLabel(entry.route)}]
+                </span>
+                <span className="text-ghost-dim">
+                  {new Date(entry.ts * 1000).toLocaleTimeString('zh-CN', { hour12: false })}
+                </span>
+              </div>
+
+              {/* 上行：遥测数据 */}
+              <div className="text-ghost-dim mb-1.5">
+                <span className="text-ghost-warn text-xs">▲ 上行遥测</span>
+                <div className="grid grid-cols-3 gap-x-3 gap-y-0.5 mt-0.5">
+                  <span>深度 {entry.packet.depth_m?.toFixed(0)}m</span>
+                  <span>航速 {entry.packet.speed_kn?.toFixed(1)}kn</span>
+                  <span>电量 {entry.packet.battery_pct?.toFixed(0)}%</span>
+                  <span>声呐 ×{entry.packet.sonar_contacts}</span>
+                  <span>压力 {entry.packet.hull_pressure_bar?.toFixed(1)}bar</span>
+                  <span>优先级 P{entry.packet.mission_priority}</span>
+                </div>
+                {entry.packet.emergency && (
+                  <span className="text-ghost-danger font-bold">[紧急标志]</span>
+                )}
+              </div>
+
+              {/* 下行：指令 */}
+              <div className="text-ghost-text leading-relaxed">
+                <span className="text-ghost-ok text-xs">▼ 下行指令</span>
+                <div className="mt-0.5 whitespace-pre-wrap">{entry.msg}</div>
+              </div>
+
+              {entry.l2_prob != null && (
+                <div className="text-ghost-dim mt-1 text-xs">
+                  MLP 分类: L2 概率={entry.l2_prob.toFixed(3)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── 主页面 ──
+
 export default function CenterView() {
   const { data, status } = useWebSocket<CenterMessage>('/ws/center')
   const models = useApi<ModelsInfo>('/api/models')
@@ -63,6 +184,31 @@ export default function CenterView() {
   const [stats, setStats] = useState({ L0: 0, L1: 0, L1_ESCALATED: 0, L2: 0 })
   const [eventLog, setEventLog] = useState<CenterTelemetry['log']>([])
   const [routeLog, setRouteLog] = useState<RouteEvent['data'][]>([])
+
+  // 潜艇弹窗
+  const [selectedSub, setSelectedSub] = useState<string | null>(null)
+  const [subLog, setSubLog] = useState<SubLogEntry[] | null>(null)
+  const [subLogLoading, setSubLogLoading] = useState(false)
+
+  const openSubLog = useCallback(async (subId: string) => {
+    setSelectedSub(subId)
+    setSubLogLoading(true)
+    setSubLog(null)
+    try {
+      const res = await fetch(`http://${window.location.hostname}:8000/api/sub/${subId}/log?n=40`)
+      if (res.ok) {
+        setSubLog((await res.json()) as SubLogEntry[])
+      }
+    } catch {
+      // ignore
+    }
+    setSubLogLoading(false)
+  }, [])
+
+  const closeSubLog = useCallback(() => {
+    setSelectedSub(null)
+    setSubLog(null)
+  }, [])
 
   useEffect(() => {
     if (!data) return
@@ -86,30 +232,21 @@ export default function CenterView() {
     <div className="p-4 grid grid-cols-3 gap-4 h-[calc(100vh-52px)]">
       {/* ── 左：潜艇集群阵列 ── */}
       <div className="border border-ghost-border bg-ghost-panel p-4 flex flex-col overflow-hidden">
-        <div className="text-xs text-ghost-dim tracking-widest mb-3 border-b border-ghost-border pb-2 shrink-0">
-          潜艇集群阵列 // 16 单元编队
+        <div className="text-xs text-ghost-dim tracking-widest mb-3 border-b border-ghost-border pb-2 shrink-0 flex justify-between">
+          <span>潜艇集群阵列 // 16 单元编队</span>
+          <span className="text-ghost-dim">点击查看独立日志</span>
         </div>
         <div className="grid grid-cols-4 gap-2 flex-1 content-start min-h-0 overflow-hidden">
           {SUB_IDS.map((id) => {
             const route = subStates[id]
-            const color =
-              route === 'L0' ? 'border-ghost-danger bg-ghost-danger/20 animate-pulse'
-              : route === 'L1-ESCALATED' ? 'border-ghost-warn bg-ghost-warn/10'
-              : route === 'L2' ? 'border-ghost-accent bg-ghost-accent/10'
-              : route === 'L1' ? 'border-ghost-ok bg-ghost-ok/5'
-              : 'border-ghost-border'
-            const textColor =
-              route === 'L0' ? 'text-ghost-danger'
-              : route === 'L1-ESCALATED' ? 'text-ghost-warn'
-              : route === 'L2' ? 'text-ghost-accent'
-              : 'text-ghost-dim'
             return (
               <div
                 key={id}
-                className={`border p-2 text-center transition-all duration-300 ${color}`}
+                onClick={() => openSubLog(id)}
+                className={`border p-2 text-center transition-all duration-300 cursor-pointer hover:brightness-125 ${gridColor(route)}`}
               >
                 <div className="text-xs font-bold">{id.replace('SUB-', '')}</div>
-                <div className={`text-xs mt-0.5 ${textColor}`}>
+                <div className={`text-xs mt-0.5 ${gridTextColor(route)}`}>
                   {route ? routeLabel(route) : '---'}
                 </div>
               </div>
@@ -224,6 +361,16 @@ export default function CenterView() {
           )}
         </div>
       </div>
+
+      {/* ── 潜艇日志弹窗 ── */}
+      {selectedSub && (
+        <SubLogModal
+          subId={selectedSub}
+          log={subLog}
+          loading={subLogLoading}
+          onClose={closeSubLog}
+        />
+      )}
     </div>
   )
 }

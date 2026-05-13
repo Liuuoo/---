@@ -56,6 +56,10 @@ _stats = {"L0": 0, "L1": 0, "L1_ESCALATED": 0, "L2": 0}
 _event_log: list[dict] = []
 _MAX_LOG = 300
 
+# 每条潜艇的独立日志（遥测上行 + 指令下行）
+_sub_logs: dict[str, list[dict]] = {}
+_SUB_LOG_MAX = 120
+
 
 def _log(level: str, sub_id: str, msg: str):
     entry = {"ts": time.time(), "level": level, "sub_id": sub_id, "msg": msg}
@@ -64,12 +68,25 @@ def _log(level: str, sub_id: str, msg: str):
         _event_log.pop()
 
 
+def _log_sub(sub_id: str, entry: dict):
+    if sub_id not in _sub_logs:
+        _sub_logs[sub_id] = []
+    _sub_logs[sub_id].insert(0, entry)
+    if len(_sub_logs[sub_id]) > _SUB_LOG_MAX:
+        _sub_logs[sub_id].pop()
+
+
 def get_stats() -> dict:
     return dict(_stats)
 
 
 def get_event_log(n: int = 50) -> list[dict]:
     return _event_log[:n]
+
+
+def get_sub_log(sub_id: str, n: int = 40) -> list[dict]:
+    """返回指定潜艇的最近 n 条遥测与指令日志"""
+    return _sub_logs.get(sub_id, [])[:n]
 
 
 # ─── L0: 规则引擎前置拦截 ────────────────────────────────────────────────────
@@ -145,6 +162,7 @@ async def route_packet(packet: SubmarinePacket) -> dict:
         result["route"] = "L0"
         result["msg"] = l0_result
         _log("L0", packet.sub_id, l0_result)
+        _log_sub(packet.sub_id, {"ts": time.time(), "route": "L0", "l2_prob": None, "packet": packet.to_dict(), "msg": l0_result})
         return result
 
     # ── Step 2: 神经网络分流判断 (启动时训练的 MLP) ──
@@ -162,6 +180,7 @@ async def route_packet(packet: SubmarinePacket) -> dict:
             msg = await _l2_process(packet, escalated=True)
             result["msg"] = msg
             _log("L1-ESCALATED", packet.sub_id, msg)
+            _log_sub(packet.sub_id, {"ts": time.time(), "route": "L1-ESCALATED", "l2_prob": round(l2_prob, 3), "packet": packet.to_dict(), "msg": msg})
         else:
             # 正常 L1 边缘处理：写入双缓冲
             _stats["L1"] += 1
@@ -174,8 +193,9 @@ async def route_packet(packet: SubmarinePacket) -> dict:
                 payload=packet.to_dict(),
             )
             await ping_pong_db.write(task)
-            result["msg"] = f"[L1-QUEUED] Task {result['task_id']} written to buffer"
+            result["msg"] = f"[L1-已入队] 任务 {result['task_id']} 写入双缓冲"
             _log("L1", packet.sub_id, result["msg"])
+            _log_sub(packet.sub_id, {"ts": time.time(), "route": "L1", "l2_prob": round(l2_prob, 3), "packet": packet.to_dict(), "msg": result["msg"]})
     else:
         # L2 战略任务
         _stats["L2"] += 1
@@ -183,5 +203,6 @@ async def route_packet(packet: SubmarinePacket) -> dict:
         msg = await _l2_process(packet, escalated=False)
         result["msg"] = msg
         _log("L2", packet.sub_id, msg)
+        _log_sub(packet.sub_id, {"ts": time.time(), "route": "L2", "l2_prob": round(l2_prob, 3), "packet": packet.to_dict(), "msg": msg})
 
     return result

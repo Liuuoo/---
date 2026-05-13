@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from core.spillover import spillover_monitor
 from core.ping_pong_db import ping_pong_db
-from core.evaluator import _l1_process, get_model_info
+from core.evaluator import _l1_process, get_model_info, get_sub_log
 from core.classifier import classifier
 from api.websocket import node_ws_handler, center_ws_handler, run_data_pipeline
 
@@ -67,6 +67,12 @@ async def classifier_report():
 async def models_info():
     """暴露 L1/L2 模拟模型铭牌"""
     return get_model_info()
+
+
+@app.get("/api/sub/{sub_id}/log")
+async def submarine_log(sub_id: str, n: int = 30):
+    """返回指定潜艇的最近 n 条遥测与指令日志"""
+    return get_sub_log(sub_id, n)
 
 
 @app.post("/api/spike")
