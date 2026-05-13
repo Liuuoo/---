@@ -66,7 +66,12 @@ class SpilloverMonitor:
         async with self._lock:
             for gpu in self._gpus:
                 gpu.load_pct = min(99.0, gpu.load_pct + random.uniform(20, 35))
-        await asyncio.sleep(duration)
+        # 锁外等待，不阻塞遥测读取
+        await asyncio.sleep(duration * 2)
+        # 缓慢回落
+        async with self._lock:
+            for gpu in self._gpus:
+                gpu.load_pct = max(5.0, gpu.load_pct - random.uniform(15, 30))
 
 
 # 全局单例

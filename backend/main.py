@@ -69,6 +69,13 @@ async def models_info():
     return get_model_info()
 
 
+@app.post("/api/spike")
+async def trigger_spike(duration: float = 3.0):
+    """触发 GPU 负载尖峰，演示算力溢出。duration 为持续秒数（默认 3s）"""
+    asyncio.create_task(spillover_monitor.spike(duration))
+    return {"ok": True, "msg": f"spike triggered, duration={duration}s"}
+
+
 @app.websocket("/ws/node")
 async def ws_node(websocket: WebSocket):
     await node_ws_handler(websocket)
