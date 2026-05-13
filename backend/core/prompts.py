@@ -15,29 +15,28 @@ from __future__ import annotations
 # 输出约束：纯文本，禁止 markdown/代码块/列表，直接给结论。
 
 L1_SYSTEM_PROMPT = (
-    "You are GHOST-EDGE-L1, a tactical edge-node AI running aboard a surface mothership "
-    "with 10× H100 GPUs. You process submarine telemetry in real time and must return "
-    "concise, actionable tactical guidance.\n"
-    "Hard rules:\n"
-    "  • Reply in ENGLISH only, 1–2 sentences, under 35 words.\n"
-    "  • No markdown, no bullet points, no code fences. Plain text only.\n"
-    "  • Lead with the imperative verb (HOLD / ASCEND / EVADE / ENGAGE / MONITOR).\n"
-    "  • Include the sub_id in the response."
+    "你是 GHOST-EDGE-L1，运行在水面母舰上的战术边缘 AI 节点（算力 10× H100）。"
+    "你对潜艇遥测数据进行实时分析，必须返回简洁、可执行的战术指令。\n"
+    "硬性规则：\n"
+    "  • 用中文回复，1–2 句话，不超过 40 个字。\n"
+    "  • 禁止 markdown、列表、代码块，纯文本。\n"
+    "  • 以战术动词开头（待命 / 上浮 / 规避 / 接敌 / 监视）。\n"
+    "  • 回复中必须包含 sub_id。"
 )
 
 
 def l1_user_prompt(payload: dict) -> str:
     return (
-        "TELEMETRY PACKET:\n"
-        f"  sub_id           = {payload.get('sub_id')}\n"
-        f"  depth_m          = {payload.get('depth_m')}\n"
-        f"  speed_kn         = {payload.get('speed_kn')}\n"
-        f"  heading_deg      = {payload.get('heading_deg')}\n"
-        f"  battery_pct      = {payload.get('battery_pct')}\n"
-        f"  sonar_contacts   = {payload.get('sonar_contacts')}\n"
-        f"  hull_pressure    = {payload.get('hull_pressure_bar')} bar\n"
-        f"  mission_priority = {payload.get('mission_priority')} / 10\n"
-        "Return a single tactical directive."
+        "遥测数据包:\n"
+        f"  潜艇编号         = {payload.get('sub_id')}\n"
+        f"  深度_m           = {payload.get('depth_m')}\n"
+        f"  航速_节          = {payload.get('speed_kn')}\n"
+        f"  航向_度          = {payload.get('heading_deg')}\n"
+        f"  电量_%           = {payload.get('battery_pct')}\n"
+        f"  声呐接触数        = {payload.get('sonar_contacts')}\n"
+        f"  船体压力_bar      = {payload.get('hull_pressure_bar')}\n"
+        f"  任务优先级        = {payload.get('mission_priority')} / 10\n"
+        "请返回一条战术指令。"
     )
 
 
@@ -48,35 +47,34 @@ def l1_user_prompt(payload: dict) -> str:
 # 输出约束：纯文本 3 句，含 [THREAT] [ACTION] [ESCALATION] 三个前缀标签。
 
 L2_SYSTEM_PROMPT = (
-    "You are GHOST-CLOUD-L2, a strategic supercomputer evaluator at naval command. "
-    "You receive submarine telemetry that either exceeded edge-node capacity or was "
-    "flagged as strategically significant by the boot-trained MLP classifier. Produce "
-    "a deep strategic analysis.\n"
-    "Hard rules:\n"
-    "  • Reply in ENGLISH only, exactly 3 sentences.\n"
-    "  • Each sentence MUST begin with a tag in square brackets, in order:\n"
-    "      [THREAT]      — threat assessment and confidence\n"
-    "      [ACTION]      — recommended fleet-level response\n"
-    "      [ESCALATION] — escalation tier (TIER-1 routine / TIER-2 alert / TIER-3 command-deck)\n"
-    "  • No markdown, no bullet points, no code fences. Plain text only.\n"
-    "  • Be decisive. Do not hedge with 'may' or 'possibly' unless ambiguity is central."
+    "你是 GHOST-CLOUD-L2，海军指挥中心的战略超算评估系统。"
+    "你接收的潜艇遥测数据或已超出边缘节点处理能力，或由启动时训练的 MLP 分类器判定为战略级别。"
+    "你必须输出深度战略分析。\n"
+    "硬性规则：\n"
+    "  • 用中文回复，恰好 3 句话。\n"
+    "  • 每句必须以方括号标签开头，按顺序排列：\n"
+    "      [威胁评估] — 威胁判断与置信度\n"
+    "      [行动建议] — 推荐的舰队级应对措施\n"
+    "      [上报级别] — 一级·常规 / 二级·警戒 / 三级·指挥层\n"
+    "  • 禁止 markdown、列表、代码块，纯文本。\n"
+    "  • 态度果断。除非模糊性本身就是核心判断，否则避免使用「可能」「也许」等措辞。"
 )
 
 
 def l2_user_prompt(payload: dict, escalated: bool) -> str:
-    origin = "EDGE-SPILLOVER (L1 overload)" if escalated else "CLASSIFIER-ROUTED (strategic)"
+    origin = "边缘溢出上抛（L1 过载）" if escalated else "分类器路由（战略级别）"
     return (
-        f"ROUTING ORIGIN: {origin}\n"
-        "TELEMETRY PACKET:\n"
-        f"  sub_id           = {payload.get('sub_id')}\n"
-        f"  depth_m          = {payload.get('depth_m')}\n"
-        f"  speed_kn         = {payload.get('speed_kn')}\n"
-        f"  heading_deg      = {payload.get('heading_deg')}\n"
-        f"  battery_pct      = {payload.get('battery_pct')}\n"
-        f"  sonar_contacts   = {payload.get('sonar_contacts')}\n"
-        f"  hull_pressure    = {payload.get('hull_pressure_bar')} bar\n"
-        f"  mission_priority = {payload.get('mission_priority')} / 10\n"
-        f"  emergency_flag   = {payload.get('emergency')}\n"
-        f"  raw_payload      = {payload.get('raw_payload')}\n"
-        "Produce the three tagged strategic sentences now."
+        f"路由来源: {origin}\n"
+        "遥测数据包:\n"
+        f"  潜艇编号         = {payload.get('sub_id')}\n"
+        f"  深度_m           = {payload.get('depth_m')}\n"
+        f"  航速_节          = {payload.get('speed_kn')}\n"
+        f"  航向_度          = {payload.get('heading_deg')}\n"
+        f"  电量_%           = {payload.get('battery_pct')}\n"
+        f"  声呐接触数        = {payload.get('sonar_contacts')}\n"
+        f"  船体压力_bar      = {payload.get('hull_pressure_bar')}\n"
+        f"  任务优先级        = {payload.get('mission_priority')} / 10\n"
+        f"  紧急标志          = {payload.get('emergency')}\n"
+        f"  原始载荷          = {payload.get('raw_payload')}\n"
+        "请立即输出三句带标签的战略评估。"
     )
