@@ -92,23 +92,24 @@ export default function CenterView() {
         <div className="grid grid-cols-4 gap-2 flex-1 content-start min-h-0 overflow-hidden">
           {SUB_IDS.map((id) => {
             const route = subStates[id]
-            const isL0 = route === 'L0'
-            const isEsc = route === 'L1-ESCALATED'
+            const color =
+              route === 'L0' ? 'border-ghost-danger bg-ghost-danger/20 animate-pulse'
+              : route === 'L1-ESCALATED' ? 'border-ghost-warn bg-ghost-warn/10'
+              : route === 'L2' ? 'border-ghost-accent bg-ghost-accent/10'
+              : route === 'L1' ? 'border-ghost-ok bg-ghost-ok/5'
+              : 'border-ghost-border'
+            const textColor =
+              route === 'L0' ? 'text-ghost-danger'
+              : route === 'L1-ESCALATED' ? 'text-ghost-warn'
+              : route === 'L2' ? 'text-ghost-accent'
+              : 'text-ghost-dim'
             return (
               <div
                 key={id}
-                className={`border p-2 text-center transition-all duration-300 ${
-                  isL0
-                    ? 'border-ghost-danger bg-ghost-danger/20 animate-pulse'
-                    : isEsc
-                    ? 'border-ghost-warn bg-ghost-warn/10'
-                    : route
-                    ? 'border-ghost-ok/50 bg-ghost-ok/5'
-                    : 'border-ghost-border'
-                }`}
+                className={`border p-2 text-center transition-all duration-300 ${color}`}
               >
                 <div className="text-xs font-bold">{id.replace('SUB-', '')}</div>
-                <div className={`text-xs mt-0.5 ${isL0 ? 'text-ghost-danger' : isEsc ? 'text-ghost-warn' : 'text-ghost-dim'}`}>
+                <div className={`text-xs mt-0.5 ${textColor}`}>
                   {route ? routeLabel(route) : '---'}
                 </div>
               </div>
