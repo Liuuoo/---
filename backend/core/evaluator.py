@@ -77,11 +77,11 @@ def get_event_log(n: int = 50) -> list[dict]:
 def _l0_check(packet: SubmarinePacket) -> Optional[str]:
     """返回 None 表示未触发 L0；返回字符串表示 L0 处置结果"""
     if packet.emergency:
-        return f"[L0-CRITICAL] EMERGENCY on {packet.sub_id}: immediate local abort protocol engaged"
+        return f"[本地熔断] {packet.sub_id} 紧急事态：立即启动本地中止协议"
     if packet.battery_pct < 8.0:
-        return f"[L0-CRITICAL] {packet.sub_id} BATTERY CRITICAL {packet.battery_pct:.1f}% — RTB ordered"
+        return f"[本地熔断] {packet.sub_id} 电量严重不足 {packet.battery_pct:.1f}% — 立即返航"
     if packet.hull_pressure_bar > 85.0:
-        return f"[L0-CRITICAL] {packet.sub_id} HULL PRESSURE {packet.hull_pressure_bar}bar — EMERGENCY SURFACE"
+        return f"[本地熔断] {packet.sub_id} 船体压力 {packet.hull_pressure_bar}bar — 紧急上浮"
     return None
 
 
