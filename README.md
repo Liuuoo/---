@@ -22,6 +22,7 @@
 - [负载溢出演示](#负载溢出演示)
 - [多视角指挥舱](#多视角指挥舱)
 - [开发说明](#开发说明)
+- [项目文档](#项目文档)
 
 ---
 
@@ -394,35 +395,45 @@ rm backend/data/classifier.pt
 
 ### 超算中心全局大屏 `/center`
 
-![超算中心](docs/screenshots/center.png)
+![超算中心](docs%26%26PPT/screenshots/center.png)
 
 *① 潜艇集群阵列（16 单元编队，按路由着色，点击弹出独立日志）② 三级路由大脑（分类器训练铭牌 + L0/L1/L2 分流占比） ③ 超算深加工日志（L2 三标签战略分析 + L0 熔断记录，内部滚动）*
 
 ### 潜艇独立日志弹窗
 
-![潜艇日志](docs/screenshots/sub-log.png)
+![潜艇日志](docs%26%26PPT/screenshots/sub-log.png)
 
 *点击任意潜艇弹出，展示该潜艇的 ▲ 上行遥测数据与 ▼ 下行 AI 指令历史*
 
 ### 边缘节点监控面板 `/node`
 
-![边缘节点](docs/screenshots/node.png)
+![边缘节点](docs%26%26PPT/screenshots/node.png)
 
 *① 10×H100 GPU 硬件遥测（负载 / VRAM / 温度实时波动） ② Ping-Pong DB 双缓冲引擎（DB_A/DB_B 翻转动画 + 已处理任务列表） ③ 算力溢出监控（吞吐量统计 + 负载 > 85% 红色告警）*
 
 ### 浅色模式
 
-![浅色模式](docs/screenshots/light-mode.png)
+![浅色模式](docs%26%26PPT/screenshots/light-mode.png)
 
 *导航栏「◇ 浅色」一键切换，偏好持久化*
 
 ### 溢出演示效果
 
-![溢出告警](docs/screenshots/spillover.png)
+![溢出告警](docs%26%26PPT/screenshots/spillover.png)
 
 *执行 `curl -X POST /api/spike` 后，GPU 负载飙红，溢出告警框出现，L1-ESCALATED 计数增长*
 
-> **截图指引：** 启动前后端后，打开上述页面，使用浏览器开发者工具模拟 1920×1080 分辨率截取全屏。截图保存至 `docs/screenshots/` 目录。
+> **截图指引：** 启动前后端后，打开上述页面，使用浏览器开发者工具模拟 1920×1080 分辨率截取全屏。截图保存至 `docs&&PPT/screenshots/` 目录。
+
+---
+
+## 项目文档
+
+| 文件 | 说明 |
+|------|------|
+| [`docs&&PPT/结题草稿.md`](docs%26%26PPT/结题草稿.md) | 结题报告完整草稿（架构设计、核心机制、前端实现） |
+| [`docs&&PPT/ghost-deep-defense_20260515_104639.pptx`](docs%26%26PPT/ghost-deep-defense_20260515_104639.pptx) | 答辩 PPT |
+| [`docs&&PPT/screenshots/`](docs%26%26PPT/screenshots/) | 界面截图资源 |
 
 ---
 
